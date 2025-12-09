@@ -1,6 +1,6 @@
 // Firebase configuration and initialization
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -12,29 +12,37 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
+// Debug: Log Firebase config (without sensitive data)
+console.log('[DEBUG] Firebase Config:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  hasApiKey: !!firebaseConfig.apiKey,
+  hasAppId: !!firebaseConfig.appId,
+});
+
 // Initialize Firebase app (singleton pattern to prevent multiple initializations)
-function initializeFirebase(): FirebaseApp {
+function getFirebaseApp(): FirebaseApp {
   if (!getApps().length) {
     return initializeApp(firebaseConfig);
   }
   return getApps()[0];
 }
 
-// Get Firestore instance
-function getFirestoreDb(): Firestore {
-  const app = initializeFirebase();
-  return getFirestore(app);
-}
-
-// Initialize on first use - works in both browser and server
+// Initialize on first use
 let dbInstance: Firestore | null = null;
 
-// Firestore works in both browser and Node.js
+// Get Firestore instance with long polling for Vercel compatibility
 export const db: Firestore = (() => {
   if (!dbInstance) {
-    dbInstance = getFirestoreDb();
+    const app = getFirebaseApp();
+    // Use initializeFirestore with experimentalForceLongPolling for Vercel
+    // This fixes WebSocket connection issues in serverless environments
+    dbInstance = initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    });
+    console.log('[DEBUG] Firestore initialized with long polling');
   }
   return dbInstance;
 })();
 
-export default initializeFirebase();
+export default getFirebaseApp();

@@ -32,32 +32,15 @@ export default function Home() {
   // Match FLL pattern: fallback password in case env var isn't set
   const SITE_PASSWORD = process.env.NEXT_PUBLIC_SITE_PASSWORD || 'hamsandwich1943';
 
-  // Debug: Log password config on component mount
-  console.log('[DEBUG] SITE_PASSWORD from env:', process.env.NEXT_PUBLIC_SITE_PASSWORD);
-  console.log('[DEBUG] SITE_PASSWORD (with fallback):', SITE_PASSWORD);
-  console.log('[DEBUG] Password length:', SITE_PASSWORD?.length);
-
   // Handle login - synchronous like FLL admin page
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Debug logging
-    console.log('[DEBUG] Login attempt:');
-    console.log('[DEBUG] Entered password:', password);
-    console.log('[DEBUG] Entered password length:', password.length);
-    console.log('[DEBUG] Expected password:', SITE_PASSWORD);
-    console.log('[DEBUG] Expected password length:', SITE_PASSWORD?.length);
-    console.log('[DEBUG] Strict equality check:', password === SITE_PASSWORD);
-    console.log('[DEBUG] Trimmed equality check:', password.trim() === SITE_PASSWORD?.trim());
-
     if (password === SITE_PASSWORD) {
-      console.log('[DEBUG] Password MATCHED - authenticating');
       setIsAuthenticated(true);
       setAuthError('');
       // Load data from Firestore AFTER authentication
       loadData();
     } else {
-      console.log('[DEBUG] Password MISMATCH');
       setAuthError('Incorrect password');
     }
   };
