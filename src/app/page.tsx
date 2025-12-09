@@ -6,7 +6,6 @@ import {
   generateExperimentData,
   loadFromFirestore,
   saveToFirestore,
-  clearFirestore,
   loadFromLocalStorage,
   addParticipant,
   removeParticipant,
@@ -28,6 +27,7 @@ export default function Home() {
   const [experimentData, setExperimentData] = useState<ExperimentData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Match FLL pattern: fallback password in case env var isn't set
   const SITE_PASSWORD = process.env.NEXT_PUBLIC_SITE_PASSWORD || 'hamsandwich1943';
@@ -90,13 +90,19 @@ export default function Home() {
     }, 100);
   };
 
-  const handleClear = async () => {
+  // Refresh data from Firestore
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     try {
-      await clearFirestore();
+      const firestoreData = await loadFromFirestore();
+      if (firestoreData) {
+        setExperimentData(firestoreData);
+      }
     } catch (error) {
-      console.error('Error clearing data:', error);
+      console.error('Error refreshing data:', error);
+    } finally {
+      setIsRefreshing(false);
     }
-    setExperimentData(null);
   };
 
   const handleAddParticipant = () => {
@@ -201,7 +207,7 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              {experimentData && <ExportButtons data={experimentData} onClear={handleClear} />}
+              {experimentData && <ExportButtons data={experimentData} onRefresh={handleRefresh} isRefreshing={isRefreshing} />}
               <ThemeToggle />
             </div>
           </div>

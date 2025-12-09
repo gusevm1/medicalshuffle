@@ -9,14 +9,29 @@ interface ExperimentFormProps {
 }
 
 export default function ExperimentForm({ onGenerate, isLoading, hasExistingData }: ExperimentFormProps) {
-  const [participants, setParticipants] = useState(25);
+  const [inputValue, setInputValue] = useState('25');
 
+  // Parse and validate the input
+  const parsedValue = parseInt(inputValue, 10);
+  const isValidNumber = !isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 50;
+  const participants = isValidNumber ? parsedValue : 0;
   const totalMeasurements = participants * 240;
+
+  // Determine validation message
+  const getValidationMessage = () => {
+    if (inputValue === '') return 'Please enter a number between 1 and 50';
+    if (isNaN(parsedValue)) return 'Please enter a valid number';
+    if (parsedValue < 1) return 'Minimum 1 participant required';
+    if (parsedValue > 50) return 'Maximum 50 participants allowed';
+    return null;
+  };
+
+  const validationMessage = getValidationMessage();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (participants > 0) {
-      onGenerate(participants);
+    if (isValidNumber) {
+      onGenerate(parsedValue);
     }
   };
 
@@ -36,9 +51,11 @@ export default function ExperimentForm({ onGenerate, isLoading, hasExistingData 
             id="participants"
             min="1"
             max="50"
-            value={participants}
-            onChange={(e) => setParticipants(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-            className="w-full px-4 py-2.5 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className={`w-full px-4 py-2.5 border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+              validationMessage ? 'border-destructive' : 'border-input'
+            }`}
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
             <span className="inline-flex items-center justify-center w-6 h-6 bg-primary/10 rounded-full">
@@ -48,25 +65,28 @@ export default function ExperimentForm({ onGenerate, isLoading, hasExistingData 
             </span>
           </div>
         </div>
+        {validationMessage && (
+          <p className="mt-2 text-sm text-destructive">{validationMessage}</p>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-border">
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Total Participants:</span>
-            <span className="font-semibold text-card-foreground">{participants}</span>
+            <span className="font-semibold text-card-foreground">{isValidNumber ? participants : '—'}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Total Measurements:</span>
-            <span className="font-semibold text-card-foreground">{totalMeasurements.toLocaleString()}</span>
+            <span className="font-semibold text-card-foreground">{isValidNumber ? totalMeasurements.toLocaleString() : '—'}</span>
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={participants === 0 || isLoading}
+          disabled={!isValidNumber || isLoading}
           className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
-            participants === 0 || isLoading
+            !isValidNumber || isLoading
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
               : 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-md cursor-pointer'
           }`}

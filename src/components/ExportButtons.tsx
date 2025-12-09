@@ -1,13 +1,14 @@
 'use client';
 
-import { ExperimentData, exportToJSON, flattenForExcel, clearLocalStorage } from '@/lib/randomization';
+import { ExperimentData, exportToJSON, flattenForExcel } from '@/lib/randomization';
 
 interface ExportButtonsProps {
   data: ExperimentData | null;
-  onClear: () => void;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
-export default function ExportButtons({ data, onClear }: ExportButtonsProps) {
+export default function ExportButtons({ data, onRefresh, isRefreshing }: ExportButtonsProps) {
   if (!data) return null;
 
   const handleExportJSON = () => {
@@ -112,15 +113,19 @@ export default function ExportButtons({ data, onClear }: ExportButtonsProps) {
     URL.revokeObjectURL(url);
   };
 
-  const handleClear = () => {
-    if (confirm('Are you sure you want to clear the saved data? This cannot be undone.')) {
-      clearLocalStorage();
-      onClear();
-    }
-  };
-
   return (
     <div className="flex flex-wrap gap-3">
+      <button
+        onClick={onRefresh}
+        disabled={isRefreshing}
+        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors cursor-pointer disabled:opacity-50"
+      >
+        <svg className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        {isRefreshing ? 'Refreshing...' : 'Refresh'}
+      </button>
+
       <button
         onClick={handleExportJSON}
         className="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors cursor-pointer"
@@ -149,16 +154,6 @@ export default function ExportButtons({ data, onClear }: ExportButtonsProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         Summary
-      </button>
-
-      <button
-        onClick={handleClear}
-        className="flex items-center gap-2 px-4 py-2 bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg font-medium text-sm transition-colors cursor-pointer"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-        Clear
       </button>
     </div>
   );
