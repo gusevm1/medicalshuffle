@@ -1,8 +1,8 @@
-'use client';
-
+// Firebase configuration and initialization
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,39 +12,29 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let _app: FirebaseApp | null = null;
-let _db: Firestore | null = null;
-
-function getApp(): FirebaseApp {
-  if (_app) return _app;
-
-  if (getApps().length === 0) {
-    _app = initializeApp(firebaseConfig);
-  } else {
-    _app = getApps()[0];
+// Initialize Firebase app (singleton pattern to prevent multiple initializations)
+function initializeFirebase(): FirebaseApp {
+  if (!getApps().length) {
+    return initializeApp(firebaseConfig);
   }
-  return _app;
+  return getApps()[0];
 }
 
-function getDb(): Firestore {
-  if (_db) return _db;
-
-  const app = getApp();
-
-  // Check if Firestore has already been initialized
-  try {
-    // Try to initialize with long polling settings
-    _db = initializeFirestore(app, {
-      experimentalForceLongPolling: true,
-    });
-  } catch {
-    // If already initialized, just get the existing instance
-    _db = getFirestore(app);
-  }
-
-  return _db;
+// Get Firestore instance
+function getFirestoreDb(): Firestore {
+  const app = initializeFirebase();
+  return getFirestore(app);
 }
 
-// Export a getter that lazily initializes
-export const db = typeof window !== 'undefined' ? getDb() : (null as unknown as Firestore);
-export default typeof window !== 'undefined' ? getApp() : (null as unknown as FirebaseApp);
+// Initialize on first use - works in both browser and server
+let dbInstance: Firestore | null = null;
+
+// Firestore works in both browser and Node.js
+export const db: Firestore = (() => {
+  if (!dbInstance) {
+    dbInstance = getFirestoreDb();
+  }
+  return dbInstance;
+})();
+
+export default initializeFirebase();
