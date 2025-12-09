@@ -129,7 +129,11 @@ export default function Home() {
   // Show password form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+        {/* Theme Toggle in top-right corner */}
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
         <div className="bg-card rounded-lg shadow-lg border border-border p-8 w-full max-w-md">
           <div className="text-center mb-6">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
