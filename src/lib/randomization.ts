@@ -94,13 +94,35 @@ function randomInt(min: number, max: number, random: () => number): number {
   return Math.floor(random() * (max - min + 1)) + min;
 }
 
-// Generate 4 unique random pressure values (1-100)
+// Generate 4 unique random pressure values (1-100) with minimum 10mmHg separation
 function generateUniquePressures(random: () => number): number[] {
-  const pressures: Set<number> = new Set();
-  while (pressures.size < 4) {
-    pressures.add(randomInt(1, 100, random));
+  const pressures: number[] = [];
+  const MIN_SEPARATION = 10;
+  const maxAttempts = 1000;
+  let attempts = 0;
+
+  while (pressures.length < 4 && attempts < maxAttempts) {
+    const candidate = randomInt(1, 100, random);
+    attempts++;
+
+    // Check if candidate is at least 10mmHg away from all existing pressures
+    const isFarEnough = pressures.every(
+      existing => Math.abs(candidate - existing) >= MIN_SEPARATION
+    );
+
+    if (isFarEnough) {
+      pressures.push(candidate);
+    }
   }
-  return Array.from(pressures);
+
+  // Fallback: if we couldn't find 4 values with random generation,
+  // use evenly spaced values (10, 35, 60, 85) shuffled
+  if (pressures.length < 4) {
+    const fallbackPressures = [10, 35, 60, 85];
+    return shuffleArray(fallbackPressures, random);
+  }
+
+  return pressures;
 }
 
 // Ball sphere definitions
@@ -381,13 +403,28 @@ const FIRESTORE_DOC_ID = 'main';
 
 // Save to Firestore
 export async function saveToFirestore(data: ExperimentData): Promise<void> {
+  console.log('[DEBUG] saveToFirestore: Starting...');
+
+  // Add timeout to prevent hanging
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Firestore save timeout after 10s')), 10000);
+  });
+
   try {
+    console.log('[DEBUG] saveToFirestore: Creating doc reference...');
     const docRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC_ID);
-    await setDoc(docRef, data);
+
+    console.log('[DEBUG] saveToFirestore: Calling setDoc...');
+    await Promise.race([
+      setDoc(docRef, data),
+      timeoutPromise
+    ]);
+
+    console.log('[DEBUG] saveToFirestore: Data saved successfully');
     // Also save to localStorage as backup
     saveToLocalStorage(data);
   } catch (error) {
-    console.error('Error saving to Firestore:', error);
+    console.error('[DEBUG] saveToFirestore: Error:', error);
     // Fallback to localStorage only
     saveToLocalStorage(data);
     throw error;
