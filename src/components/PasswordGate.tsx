@@ -17,6 +17,13 @@ export default function PasswordGate({ children }: PasswordGateProps) {
 
     const correctPassword = process.env.NEXT_PUBLIC_SITE_PASSWORD;
 
+    // Debug: log if password env var is set (don't log the actual password)
+    if (!correctPassword) {
+      console.error('NEXT_PUBLIC_SITE_PASSWORD is not set');
+      setError('Configuration error - password not set');
+      return;
+    }
+
     if (password === correctPassword) {
       setIsAuthenticated(true);
     } else {
