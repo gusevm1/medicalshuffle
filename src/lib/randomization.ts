@@ -16,16 +16,16 @@ export interface BallModel {
   order: number;
 }
 
-export interface BalloonPressurePoint {
+export interface BalloonModel {
   id: string;
-  pressure: number; // 1-100 mmHg
+  name: string;
   order: number;
 }
 
 export interface ModelTypeBlock {
   modelType: 'ball' | 'balloon';
   order: number;
-  models: BallModel[] | BalloonPressurePoint[];
+  models: BallModel[] | BalloonModel[];
   measurements: Measurement[];
 }
 
@@ -49,7 +49,7 @@ export interface Session {
   modalityOrder: ['ultrasound', 'palpation'] | ['palpation', 'ultrasound'];
   modelTypeOrder: ['ball', 'balloon'] | ['balloon', 'ball'];
   ballSphereOrder: string[];
-  balloonPointOrder: string[];
+  balloonOrder: string[];
   modalities: ModalityBlock[];
   totalMeasurements: number;
 }
@@ -91,48 +91,20 @@ function shuffleArray<T>(array: T[], random: () => number): T[] {
   return shuffled;
 }
 
-// Generate random integer in range [min, max] inclusive
-function randomInt(min: number, max: number, random: () => number): number {
-  return Math.floor(random() * (max - min + 1)) + min;
-}
-
-// Generate 4 unique random pressure values (1-100) with minimum 10mmHg separation
-function generateUniquePressures(random: () => number): number[] {
-  const pressures: number[] = [];
-  const MIN_SEPARATION = 10;
-  const maxAttempts = 1000;
-  let attempts = 0;
-
-  while (pressures.length < 4 && attempts < maxAttempts) {
-    const candidate = randomInt(1, 100, random);
-    attempts++;
-
-    // Check if candidate is at least 10mmHg away from all existing pressures
-    const isFarEnough = pressures.every(
-      existing => Math.abs(candidate - existing) >= MIN_SEPARATION
-    );
-
-    if (isFarEnough) {
-      pressures.push(candidate);
-    }
-  }
-
-  // Fallback: if we couldn't find 4 values with random generation,
-  // use evenly spaced values (10, 35, 60, 85) shuffled
-  if (pressures.length < 4) {
-    const fallbackPressures = [10, 35, 60, 85];
-    return shuffleArray(fallbackPressures, random);
-  }
-
-  return pressures;
-}
-
 // Ball sphere definitions with color names
 const BALL_SPHERES = [
   { id: 'S1', name: 'Yellow', color: '#EAB308' },
   { id: 'S2', name: 'Green', color: '#22C55E' },
   { id: 'S3', name: 'Red', color: '#EF4444' },
   { id: 'S4', name: 'Blue', color: '#3B82F6' },
+];
+
+// Balloon model definitions
+const BALLOON_MODELS = [
+  { id: 'B1', name: 'Balloon 1' },
+  { id: 'B2', name: 'Balloon 2' },
+  { id: 'B3', name: 'Balloon 3' },
+  { id: 'B4', name: 'Balloon 4' },
 ];
 
 // Generate measurements for a model type using cycle structure
@@ -203,7 +175,7 @@ function generateSession(
   modalityOrder: ['ultrasound', 'palpation'] | ['palpation', 'ultrasound'],
   modelTypeOrder: ['ball', 'balloon'] | ['balloon', 'ball'],
   ballSphereOrder: string[],
-  balloonPoints: BalloonPressurePoint[],
+  balloonOrder: string[],
   random: () => number
 ): Session {
   const modalities: ModalityBlock[] = [];
@@ -223,6 +195,16 @@ function generateSession(
       };
     });
 
+    // Create balloon models block
+    const balloonModels: BalloonModel[] = balloonOrder.map((balloonId, idx) => {
+      const balloon = BALLOON_MODELS.find(b => b.id === balloonId)!;
+      return {
+        id: balloonId,
+        name: balloon.name,
+        order: idx + 1,
+      };
+    });
+
     // For Palpation: independently randomize order for each repetition
     // For Ultrasound: use fixed order across all repetitions
     const ballMeasurements = isPalpation
@@ -238,16 +220,15 @@ function generateSession(
           ballModels.map(m => m.color)
         );
 
-    // Create balloon models block
     const balloonMeasurements = isPalpation
       ? generateRandomizedCycleMeasurements(
-          balloonPoints.map(p => p.id),
-          balloonPoints.map(p => `${p.pressure} mmHg`),
+          balloonOrder,
+          balloonModels.map(m => m.name),
           random
         )
       : generateCycleMeasurements(
-          balloonPoints.map(p => p.id),
-          balloonPoints.map(p => `${p.pressure} mmHg`)
+          balloonOrder,
+          balloonModels.map(m => m.name)
         );
 
     const ballBlock: ModelTypeBlock = {
@@ -260,7 +241,7 @@ function generateSession(
     const balloonBlock: ModelTypeBlock = {
       modelType: 'balloon',
       order: modelTypeOrder[0] === 'balloon' ? 1 : 2,
-      models: balloonPoints,
+      models: balloonModels,
       measurements: balloonMeasurements,
     };
 
@@ -277,7 +258,7 @@ function generateSession(
     modalityOrder,
     modelTypeOrder,
     ballSphereOrder,
-    balloonPointOrder: balloonPoints.map(p => p.id),
+    balloonOrder,
     modalities,
     totalMeasurements: 80, // 2 modalities × 2 model types × 4 models × 5 reps
   };
@@ -302,19 +283,12 @@ function generateParticipantRandomization(
   const ballSphereIds = BALL_SPHERES.map(s => s.id);
   const ballSphereOrder = shuffleArray(ballSphereIds, random);
 
-  // Layer 4: Generate and randomize balloon pressure points (independent from ball)
-  const pressures = generateUniquePressures(random);
-  const balloonPointIds = ['P1', 'P2', 'P3', 'P4'];
-  const shuffledBalloonIds = shuffleArray(balloonPointIds, random);
-
-  const balloonPoints: BalloonPressurePoint[] = shuffledBalloonIds.map((id, idx) => ({
-    id,
-    pressure: pressures[idx],
-    order: idx + 1,
-  }));
+  // Layer 4: Randomize balloon order (independent from ball)
+  const balloonIds = BALLOON_MODELS.map(b => b.id);
+  const balloonOrder = shuffleArray(balloonIds, random);
 
   // Generate identical sessions (randomized ONCE, copied to all 3)
-  const baseSession = generateSession(1, modalityOrder, modelTypeOrder, ballSphereOrder, balloonPoints, random);
+  const baseSession = generateSession(1, modalityOrder, modelTypeOrder, ballSphereOrder, balloonOrder, random);
 
   const sessions: [Session, Session, Session] = [
     { ...baseSession, sessionNumber: 1 },
@@ -439,7 +413,9 @@ export function loadFromLocalStorage(): ExperimentData | null {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored) as ExperimentData;
+        const rawData = JSON.parse(stored);
+        // Migrate old data format to new format
+        return migrateData(rawData);
       } catch {
         return null;
       }
@@ -453,6 +429,115 @@ export function clearLocalStorage(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY);
   }
+}
+
+// Migrate old data format to new format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function migrateData(data: any): ExperimentData {
+  if (!data || !data.participants) return data;
+
+  // Map old sphere names to new color names
+  const sphereToColor: { [key: string]: { name: string; color: string } } = {
+    'Sphere 1': { name: 'Yellow', color: '#EAB308' },
+    'Sphere 2': { name: 'Green', color: '#22C55E' },
+    'Sphere 3': { name: 'Red', color: '#EF4444' },
+    'Sphere 4': { name: 'Blue', color: '#3B82F6' },
+  };
+
+  for (const participant of data.participants) {
+    for (const session of participant.sessions) {
+      // Migrate balloonPointOrder -> balloonOrder
+      if (session.balloonPointOrder && !session.balloonOrder) {
+        // Convert old P1, P2, P3, P4 IDs to new B1, B2, B3, B4 IDs
+        session.balloonOrder = session.balloonPointOrder.map((id: string) => {
+          if (id.startsWith('P')) {
+            return 'B' + id.substring(1);
+          }
+          return id;
+        });
+        delete session.balloonPointOrder;
+      }
+
+      // Migrate models in modalities
+      for (const modality of session.modalities) {
+        // Migrate ball models (Sphere names -> Color names)
+        const ballBlock = modality.ballBlock;
+        if (ballBlock) {
+          // Migrate ball models
+          ballBlock.models = ballBlock.models.map((m: { id: string; name: string; color?: string; order: number }) => {
+            const colorInfo = sphereToColor[m.name];
+            if (colorInfo) {
+              return {
+                id: m.id,
+                name: colorInfo.name,
+                color: colorInfo.color,
+                order: m.order
+              };
+            }
+            // Already migrated or new format
+            if (!m.color) {
+              // Add color based on ID
+              const sphereNum = m.id.substring(1);
+              const defaultColors: { [key: string]: string } = {
+                '1': '#EAB308', '2': '#22C55E', '3': '#EF4444', '4': '#3B82F6'
+              };
+              return { ...m, color: defaultColors[sphereNum] || '#888888' };
+            }
+            return m;
+          });
+
+          // Migrate ball measurements
+          ballBlock.measurements = ballBlock.measurements.map((m: { modelId: string; modelName: string; color?: string; repetition: number; modelOrder: number }) => {
+            const colorInfo = sphereToColor[m.modelName];
+            if (colorInfo) {
+              return { ...m, modelName: colorInfo.name, color: colorInfo.color };
+            }
+            return m;
+          });
+        }
+
+        // Migrate balloon models
+        const balloonBlock = modality.balloonBlock;
+        if (balloonBlock) {
+          // Migrate models from pressure-based to name-based
+          balloonBlock.models = balloonBlock.models.map((m: { id: string; pressure?: number; name?: string; order: number }) => {
+            // Convert old P IDs to new B IDs
+            let newId = m.id;
+            if (m.id.startsWith('P')) {
+              newId = 'B' + m.id.substring(1);
+            }
+            // If it has pressure (old format), convert to name
+            if ('pressure' in m && !('name' in m)) {
+              const balloonNum = newId.substring(1);
+              return {
+                id: newId,
+                name: `Balloon ${balloonNum}`,
+                order: m.order
+              };
+            }
+            return { ...m, id: newId };
+          });
+
+          // Migrate measurements
+          balloonBlock.measurements = balloonBlock.measurements.map((m: { modelId: string; modelName: string; repetition: number; modelOrder: number }) => {
+            let newId = m.modelId;
+            if (m.modelId.startsWith('P')) {
+              newId = 'B' + m.modelId.substring(1);
+            }
+            // If modelName contains mmHg, convert to Balloon name
+            let newName = m.modelName;
+            if (m.modelName.includes('mmHg')) {
+              const balloonNum = newId.substring(1);
+              newName = `Balloon ${balloonNum}`;
+            }
+            return { ...m, modelId: newId, modelName: newName };
+          });
+        }
+      }
+    }
+  }
+
+  return data as ExperimentData;
 }
 
 // Firestore functions
@@ -497,8 +582,10 @@ export async function loadFromFirestore(): Promise<ExperimentData | null> {
     ]);
 
     if (docSnap && docSnap.exists()) {
-      const data = docSnap.data() as ExperimentData;
-      // Update localStorage with latest from Firestore
+      const rawData = docSnap.data();
+      // Migrate old data format to new format
+      const data = migrateData(rawData);
+      // Update localStorage with migrated data
       saveToLocalStorage(data);
       return data;
     }

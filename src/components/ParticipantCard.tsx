@@ -96,12 +96,7 @@ function MeasurementTable({ block }: { block: ModelTypeBlock }) {
         </tbody>
       </table>
       <p className="mt-1 text-xs text-muted-foreground">
-        Models: {block.models.map(m => {
-          if ('color' in m) {
-            return m.id;
-          }
-          return `${m.id} (${(m as { pressure: number }).pressure} mmHg)`;
-        }).join(', ')}
+        Models: {block.models.map(m => m.id).join(', ')}
       </p>
     </div>
   );
@@ -302,9 +297,9 @@ export default function ParticipantCard({ participant, onRemove, onRegenerate }:
               </p>
             </div>
             <div>
-              <span className="text-muted-foreground">Balloon Point Order:</span>
+              <span className="text-muted-foreground">Balloon Order:</span>
               <p className="font-mono text-card-foreground">
-                {participant.sessions[0].balloonPointOrder.join(' → ')}
+                {(participant.sessions[0].balloonOrder || (participant.sessions[0] as unknown as { balloonPointOrder?: string[] }).balloonPointOrder || []).join(' → ')}
               </p>
             </div>
           </div>

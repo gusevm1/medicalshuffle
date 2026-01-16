@@ -96,7 +96,7 @@ export default function ExportButtons({ data }: ExportButtonsProps) {
       summaryLines.push(`- Modality Order: ${session.modalityOrder.join(' → ')}`);
       summaryLines.push(`- Model Type Order: ${session.modelTypeOrder.join(' → ')}`);
       summaryLines.push(`- Ball Sphere Order: ${session.ballSphereOrder.join(' → ')}`);
-      summaryLines.push(`- Balloon Point Order: ${session.balloonPointOrder.join(' → ')}`);
+      summaryLines.push(`- Balloon Order: ${(session.balloonOrder || (session as unknown as { balloonPointOrder?: string[] }).balloonPointOrder || []).join(' → ')}`);
       summaryLines.push('');
     }
 
