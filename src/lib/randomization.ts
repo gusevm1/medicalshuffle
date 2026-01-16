@@ -12,6 +12,7 @@
 export interface BallModel {
   id: string;
   name: string;
+  color: string;
   order: number;
 }
 
@@ -33,6 +34,7 @@ export interface Measurement {
   modelOrder: number; // 1-4
   modelId: string;
   modelName: string;
+  color?: string; // For ball models (sphere colors)
 }
 
 export interface ModalityBlock {
@@ -125,30 +127,36 @@ function generateUniquePressures(random: () => number): number[] {
   return pressures;
 }
 
-// Ball sphere definitions
+// Ball sphere definitions with color names
 const BALL_SPHERES = [
-  { id: 'S1', name: 'Sphere 1' },
-  { id: 'S2', name: 'Sphere 2' },
-  { id: 'S3', name: 'Sphere 3' },
-  { id: 'S4', name: 'Sphere 4' },
+  { id: 'S1', name: 'Yellow', color: '#EAB308' },
+  { id: 'S2', name: 'Green', color: '#22C55E' },
+  { id: 'S3', name: 'Red', color: '#EF4444' },
+  { id: 'S4', name: 'Blue', color: '#3B82F6' },
 ];
 
 // Generate measurements for a model type using cycle structure
 function generateCycleMeasurements(
   modelIds: string[],
   modelNames: string[],
+  colors?: string[],
   repetitions: number = 5
 ): Measurement[] {
   const measurements: Measurement[] = [];
 
   for (let rep = 1; rep <= repetitions; rep++) {
     for (let order = 0; order < modelIds.length; order++) {
-      measurements.push({
+      const measurement: Measurement = {
         repetition: rep,
         modelOrder: order + 1,
         modelId: modelIds[order],
         modelName: modelNames[order],
-      });
+      };
+      // Only add color if it exists (Firebase doesn't accept undefined)
+      if (colors?.[order]) {
+        measurement.color = colors[order];
+      }
+      measurements.push(measurement);
     }
   }
 
@@ -160,6 +168,7 @@ function generateRandomizedCycleMeasurements(
   modelIds: string[],
   modelNames: string[],
   random: () => number,
+  colors?: string[],
   repetitions: number = 5
 ): Measurement[] {
   const measurements: Measurement[] = [];
@@ -171,12 +180,17 @@ function generateRandomizedCycleMeasurements(
 
     for (let order = 0; order < shuffledIndices.length; order++) {
       const idx = shuffledIndices[order];
-      measurements.push({
+      const measurement: Measurement = {
         repetition: rep,
         modelOrder: order + 1,
         modelId: modelIds[idx],
         modelName: modelNames[idx],
-      });
+      };
+      // Only add color if it exists (Firebase doesn't accept undefined)
+      if (colors?.[idx]) {
+        measurement.color = colors[idx];
+      }
+      measurements.push(measurement);
     }
   }
 
@@ -204,6 +218,7 @@ function generateSession(
       return {
         id: sphereId,
         name: sphere.name,
+        color: sphere.color,
         order: idx + 1,
       };
     });
@@ -214,11 +229,13 @@ function generateSession(
       ? generateRandomizedCycleMeasurements(
           ballSphereOrder,
           ballModels.map(m => m.name),
-          random
+          random,
+          ballModels.map(m => m.color)
         )
       : generateCycleMeasurements(
           ballSphereOrder,
-          ballModels.map(m => m.name)
+          ballModels.map(m => m.name),
+          ballModels.map(m => m.color)
         );
 
     // Create balloon models block
