@@ -155,18 +155,48 @@ function generateCycleMeasurements(
   return measurements;
 }
 
+// Generate measurements with independently randomized order for each repetition (for Palpation)
+function generateRandomizedCycleMeasurements(
+  modelIds: string[],
+  modelNames: string[],
+  random: () => number,
+  repetitions: number = 5
+): Measurement[] {
+  const measurements: Measurement[] = [];
+
+  for (let rep = 1; rep <= repetitions; rep++) {
+    // Create indices and shuffle them for this repetition
+    const indices = Array.from({ length: modelIds.length }, (_, i) => i);
+    const shuffledIndices = shuffleArray(indices, random);
+
+    for (let order = 0; order < shuffledIndices.length; order++) {
+      const idx = shuffledIndices[order];
+      measurements.push({
+        repetition: rep,
+        modelOrder: order + 1,
+        modelId: modelIds[idx],
+        modelName: modelNames[idx],
+      });
+    }
+  }
+
+  return measurements;
+}
+
 // Generate a complete session based on randomization
 function generateSession(
   sessionNumber: 1 | 2 | 3,
   modalityOrder: ['ultrasound', 'palpation'] | ['palpation', 'ultrasound'],
   modelTypeOrder: ['ball', 'balloon'] | ['balloon', 'ball'],
   ballSphereOrder: string[],
-  balloonPoints: BalloonPressurePoint[]
+  balloonPoints: BalloonPressurePoint[],
+  random: () => number
 ): Session {
   const modalities: ModalityBlock[] = [];
 
   for (let i = 0; i < modalityOrder.length; i++) {
     const modality = modalityOrder[i];
+    const isPalpation = modality === 'palpation';
 
     // Create ball models block
     const ballModels: BallModel[] = ballSphereOrder.map((sphereId, idx) => {
@@ -178,16 +208,30 @@ function generateSession(
       };
     });
 
-    const ballMeasurements = generateCycleMeasurements(
-      ballSphereOrder,
-      ballModels.map(m => m.name)
-    );
+    // For Palpation: independently randomize order for each repetition
+    // For Ultrasound: use fixed order across all repetitions
+    const ballMeasurements = isPalpation
+      ? generateRandomizedCycleMeasurements(
+          ballSphereOrder,
+          ballModels.map(m => m.name),
+          random
+        )
+      : generateCycleMeasurements(
+          ballSphereOrder,
+          ballModels.map(m => m.name)
+        );
 
     // Create balloon models block
-    const balloonMeasurements = generateCycleMeasurements(
-      balloonPoints.map(p => p.id),
-      balloonPoints.map(p => `${p.pressure} mmHg`)
-    );
+    const balloonMeasurements = isPalpation
+      ? generateRandomizedCycleMeasurements(
+          balloonPoints.map(p => p.id),
+          balloonPoints.map(p => `${p.pressure} mmHg`),
+          random
+        )
+      : generateCycleMeasurements(
+          balloonPoints.map(p => p.id),
+          balloonPoints.map(p => `${p.pressure} mmHg`)
+        );
 
     const ballBlock: ModelTypeBlock = {
       modelType: 'ball',
@@ -253,7 +297,7 @@ function generateParticipantRandomization(
   }));
 
   // Generate identical sessions (randomized ONCE, copied to all 3)
-  const baseSession = generateSession(1, modalityOrder, modelTypeOrder, ballSphereOrder, balloonPoints);
+  const baseSession = generateSession(1, modalityOrder, modelTypeOrder, ballSphereOrder, balloonPoints, random);
 
   const sessions: [Session, Session, Session] = [
     { ...baseSession, sessionNumber: 1 },

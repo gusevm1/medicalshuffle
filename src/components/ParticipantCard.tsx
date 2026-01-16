@@ -49,7 +49,17 @@ function ModelTypeBadge({ modelType }: { modelType: string }) {
 }
 
 function MeasurementTable({ block }: { block: ModelTypeBlock }) {
-  const modelNames = block.models.map(m => 'name' in m ? m.name : `${m.pressure} mmHg`);
+  // Group measurements by repetition to show the actual order per rep
+  const measurementsByRep: { [rep: number]: { modelId: string; modelName: string }[] } = {};
+  for (const m of block.measurements) {
+    if (!measurementsByRep[m.repetition]) {
+      measurementsByRep[m.repetition] = [];
+    }
+    measurementsByRep[m.repetition].push({ modelId: m.modelId, modelName: m.modelName });
+  }
+
+  // Sort each rep's measurements by modelOrder (they should already be in order, but just in case)
+  const numModels = block.models.length;
 
   return (
     <div className="mt-2">
@@ -57,28 +67,31 @@ function MeasurementTable({ block }: { block: ModelTypeBlock }) {
         <thead>
           <tr className="border-b border-border">
             <th className="py-1.5 px-2 text-left font-medium text-muted-foreground">Rep</th>
-            {modelNames.map((name, idx) => (
+            {Array.from({ length: numModels }, (_, idx) => (
               <th key={idx} className="py-1.5 px-2 text-center font-medium text-muted-foreground">
-                {block.modelType === 'ball' ? `S${idx + 1}` : `P${idx + 1}`}
+                #{idx + 1}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {[1, 2, 3, 4, 5].map(rep => (
-            <tr key={rep} className="border-b border-border/50">
-              <td className="py-1.5 px-2 font-medium text-card-foreground">{rep}</td>
-              {modelNames.map((name, idx) => (
-                <td key={idx} className="py-1.5 px-2 text-center text-muted-foreground">
-                  {name}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {[1, 2, 3, 4, 5].map(rep => {
+            const repMeasurements = measurementsByRep[rep] || [];
+            return (
+              <tr key={rep} className="border-b border-border/50">
+                <td className="py-1.5 px-2 font-medium text-card-foreground">{rep}</td>
+                {repMeasurements.map((m, idx) => (
+                  <td key={idx} className="py-1.5 px-2 text-center text-muted-foreground">
+                    {m.modelName}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <p className="mt-1 text-xs text-muted-foreground">
-        Model Order: {block.models.map(m => m.id).join(' → ')}
+        Models: {block.models.map(m => `${m.id}${'pressure' in m ? ` (${m.pressure} mmHg)` : ''}`).join(', ')}
       </p>
     </div>
   );
