@@ -6,8 +6,21 @@ interface SummaryStatsProps {
   data: ExperimentData;
 }
 
+const MINUTES_PER_SESSION = 30;
+const SESSIONS_PER_PARTICIPANT = 3;
+
+function formatTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
 export default function SummaryStats({ data }: SummaryStatsProps) {
   const { summary } = data;
+
+  const totalLabTime = summary.totalParticipants * SESSIONS_PER_PARTICIPANT * MINUTES_PER_SESSION;
 
   const stats = [
     {
@@ -50,6 +63,17 @@ export default function SummaryStats({ data }: SummaryStatsProps) {
       ),
       color: 'bg-chart-4/10 text-chart-4',
     },
+    {
+      label: 'Total Lab Time',
+      value: formatTime(totalLabTime),
+      icon: (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1H9v2.5a.5.5 0 01-1 0V7.5z" />
+          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z" clipRule="evenodd" />
+        </svg>
+      ),
+      color: 'bg-chart-1/10 text-chart-1',
+    },
   ];
 
   return (
@@ -63,7 +87,7 @@ export default function SummaryStats({ data }: SummaryStatsProps) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
