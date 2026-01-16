@@ -68,11 +68,10 @@ export default function SummaryStats({ data }: SummaryStatsProps) {
       value: formatTime(totalLabTime),
       icon: (
         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8 7.5a.5.5 0 01.5-.5h3a.5.5 0 010 1H9v2.5a.5.5 0 01-1 0V7.5z" />
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z" clipRule="evenodd" />
+          <path d="M5 2h10a1 1 0 010 2h-.5l-2 4 2 4h.5a1 1 0 010 2H5a1 1 0 010-2h.5l2-4-2-4H5a1 1 0 010-2zm3.5 2l1.5 3 1.5-3h-3zm3 8l-1.5-3-1.5 3h3z" />
         </svg>
       ),
-      color: 'bg-chart-1/10 text-chart-1',
+      color: 'bg-chart-5/10 text-chart-5',
     },
   ];
 
